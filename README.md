@@ -1,257 +1,150 @@
-# Smart Campus
+# Smart Campus — College Management System (ERP)
 
-A role-based, web-based **Smart Campus Management System** designed to
-centralize academic and administrative workflows for a college in one
-platform.
+Smart Campus is an enterprise-grade academic management system designed for colleges and universities. It centralizes operations across **Management**, **Heads of Departments (HOD)**, **Administration**, **Faculty**, and **Students**.
 
-## Overview
+The application is grounded in the academic context of **B.Tech Computer Science and Engineering, Academic Session 2026–2027**.
 
-Smart Campus aims to reduce fragmented records, repetitive manual work,
-and delays in campus communication through role-specific dashboards and
-structured workflows.
+---
 
-**User hierarchy:** Management → HOD → Admin → Faculty → Students
+## 🏛️ System User Hierarchy & Dashboards
 
-> **Scope note:** The Attendance module is explicitly excluded from this
-> project.
+Smart Campus provides tailored workspaces for each tier in the institutional hierarchy:
 
-## Objectives
+1. **Management Dashboard**:
+   - Executive KPIs (Total Students: 1,284, Faculty: 86, Departments: 12, Attendance: 87.6%).
+   - Department-level performance comparisons across branches.
+   - Financial fee realization summary (₹42.8L collected, 92%).
+   - Helpdesk grievance resolution status and NIRF / NAAC accreditation report generators.
 
--   Centralize authorized campus information and common workflows.
--   Provide role-specific dashboards and permissions.
--   Manage academic structure, timetables, assignments, examinations,
-    results, notices, and campus service requests.
--   Improve traceability through request statuses, reports, and audit
-    logs.
--   Provide a responsive interface for desktop, tablet, and mobile
-    browsers.
--   Evaluate functionality, security, usability, and data integrity
-    through testing.
+2. **HOD Dashboard (Computer Science & Engineering)**:
+   - Department student & faculty strength.
+   - Faculty workload distribution and syllabus progression.
+   - Faculty-subject allocations for CSE Semester 5 courses.
+   - Departmental attendance trends with automated low-attendance defaulters alerts (< 75%).
 
-## User Roles
+3. **Admin Dashboard**:
+   - Student and faculty account provisioning shortcuts.
+   - Academic session and semester schedule configuration (Autumn 2026–2027).
+   - Urgent grievance tickets triage and facility staff dispatch.
+   - Fee ledger monitoring and circular management.
 
-  -----------------------------------------------------------------------
-  Role                                Main responsibilities
-  ----------------------------------- -----------------------------------
-  **Management**                      View institution-wide summaries and
-                                      approved reports; oversee
-                                      departmental operations.
+4. **Faculty Dashboard**:
+   - Today's teaching schedule with room and period timing.
+   - Instant 1-click **Mark Attendance** shortcut for current lectures.
+   - Coursework assignment grading queue (e.g. Dynamic Programming & POSIX threads).
+   - Mid-term exam invigilation assignments.
 
-  **HOD**                             Supervise department-level records,
-                                      academic planning, notices, and
-                                      reports.
+5. **Student Dashboard**:
+   - Personalized student banner (Aarav Mehta, Roll No: `24CSE118`, CSE Sec A).
+   - Real-time monthly attendance gauge with compliance indicator.
+   - Today's lecture schedule in Aryabhatta Room 304.
+   - Pending assignment deadlines, semester grade report, and fee clearance status.
 
-  **Admin**                           Maintain authorized operational
-                                      records, academic structure, fee
-                                      records, schedules, and service
-                                      workflows.
+---
 
-  **Faculty**                         Manage assigned subjects,
-                                      assignments, submissions, marks,
-                                      learning resources, and class
-                                      notices.
+## 📚 Core Modules
 
-  **Students**                        View permitted personal academic
-                                      information, timetable,
-                                      assignments, exam schedule,
-                                      released results, notices, and
-                                      request status.
-  -----------------------------------------------------------------------
+### 1. Attendance Management
+- **Faculty Workflow**:
+  - Class selector (`B.Tech CSE 5th Sem Sec A`), Subject selector (`CS501 Design & Analysis of Algorithms`), Date, and Session (`Lecture 02: 10:00 AM`).
+  - Searchable student roster with Present / Absent toggles.
+  - Bulk actions: **All Present**, **All Absent**, and Reset.
+  - Live count of Present vs. Absent students.
+  - Confirmation modal before register lock and saved records log.
+- **Student Monthly View**:
+  - Formula-based percentage calculation:  
+    $$\text{Monthly Attendance \%} = \left(\frac{\text{Classes Attended during Month}}{\text{Classes Conducted during Month}}\right) \times 100$$
+  - Subject-by-subject percentage breakdown with safety criteria (> 75% safe, < 75% warning).
+  - Handles zero conducted classes with a clean `N/A` state without divide-by-zero errors.
 
-Permissions must be enforced on the server/API, not only by hiding
-interface elements.
+### 2. Student & Faculty Management
+- **Student Directory**: Search by name or roll number, filter by status, student profile drawers, and role-authorized registration forms.
+- **Faculty Directory**: Faculty profiles, designations, educational qualifications, assigned subjects, and weekly teaching workload hours.
 
-## Planned Modules
+### 3. Academics (Departments, Classes & Subjects)
+- Department overviews with HOD assignments and AICTE intake limits.
+- Class sections with assigned mentors and lecture rooms.
+- Course syllabus directory with credit units, theory/practical classification, and assigned instructors.
 
--   Authentication, user profiles, and role/permission management
--   Student and faculty management
--   Department, program, class, section, subject, and room management
--   Timetable management with faculty/class/room conflict checks
--   Assignments, submissions, and learning resources
--   Examination schedules, marks, and results
--   Notices and announcements
--   Complaints and helpdesk tickets
--   Fee records and payment-status tracking
--   Events and campus service requests
--   Dashboards, reports, and analytics
--   Optional AI campus assistant for questions grounded in approved
-    college documents
+### 4. Timetable Management
+- Day-by-day interactive timetable (Monday through Friday, 09:00 AM to 05:00 PM).
+- Room numbers, period numbers, faculty names, and conflict-free verification badge.
 
-### Excluded
+### 5. Coursework & Assignments
+- **Faculty**: Publish new assignments with deadlines and rubrics, view submissions list, grade student work, and enter qualitative feedback.
+- **Student**: View deadline alerts, upload submission archives (`.zip`, `.pdf`), and view released grades and instructor feedback.
 
--   Attendance recording, attendance percentages, attendance reports,
-    and attendance-related workflows
--   Unapproved access to real student or faculty data
--   Autonomous AI decisions about marks, fees, discipline, or other
-    high-impact matters
+### 6. Examinations & Results
+- Datesheet for Mid-Semester Examinations Autumn 2026 with exam halls and timings.
+- Digital hall ticket download.
+- Official Semester Grade Card displaying subject-wise internal, external, total marks, letter grades, SGPA (9.18), and CGPA (8.92).
 
-## Proposed Technology Stack
+### 7. Administrative Modules
+- **Notices & Circulars**: Categorized by Academic, Exams, Events, and Administrative, with target audience scoping and pinned notices.
+- **Complaints & Grievances**: Student private ticketing system, category & priority tags, and staff resolution workflow pipeline (*Submitted → Under Review → Assigned → In Progress → Resolved → Closed*).
+- **Fee Records**: Itemized tuition statements, payment clearance status, receipts, and offline payment recording for administrators.
+- **Campus Events**: Symposia, hackathons (*HackCampus 2026*), guest lectures, and RSVP tracking.
+- **Reports & Audits**: Exportable tables and charts for attendance compliance, branch intake ratios, and SGPA distribution curves.
 
-  -----------------------------------------------------------------------
-  Layer                   Technology              Purpose
-  ----------------------- ----------------------- -----------------------
-  Frontend                Next.js, React,         Responsive dashboards
-                          TypeScript              and user interface
+### 8. Enhanced AI & Navigation Features
+- **Campus AI Assistant**: Modal dialog answering campus queries (timetable, attendance rules, assignments, exam dates) with official references and prompt chips.
+- **Global Search (`⌘K`)**: Fast multi-entity search indexing students, faculty, courses, rooms, and notices.
+- **Notifications Drawer**: Interactive slide-out notification center with unread count and mark-as-read controls.
 
-  Styling                 Tailwind CSS            Consistent responsive
-                                                  design
+---
 
-  Backend/API             Python, FastAPI         Business logic and REST
-                                                  APIs
+## 🛠️ Technology Stack
 
-  Database                PostgreSQL              Structured records and
-                                                  relationships
+- **Framework**: Next.js 16.4 (App Router)
+- **Library**: React 19
+- **Language**: TypeScript 5.7 (Strict Mode)
+- **Styling**: Tailwind CSS v4 & custom design tokens
+- **Icons**: Lucide React
+- **Backend Communication**: Central REST API Client (`lib/api-client.ts`) with development mock fallback pointing to FastAPI at `http://localhost:8000/api`
 
-  Charts                  Recharts or equivalent  Dashboard
-                                                  visualizations
+---
 
-  AI integration          Gemini API or an        Campus document Q&A
-  (optional)              approved model          
+## 🚀 Getting Started
 
-  Development             Visual Studio Code,     Coding and version
-                          Git, GitHub             control
+### 1. Prerequisites
+- Node.js v20+ (Node v24 tested)
+- pnpm v11+ / npm v10+
 
-  Testing                 Unit, API integration,  Verify correctness and
-                          role/permission, and    access control
-                          usability tests         
-  -----------------------------------------------------------------------
-
-The stack is proposed and may be refined during implementation with
-faculty guidance.
-
-## High-Level Architecture
-
-1.  **Presentation layer:** Role-specific web dashboards, forms, tables,
-    and notifications.
-2.  **API/application layer:** Authentication, authorization,
-    validation, business rules, workflows, and reporting.
-3.  **Data layer:** PostgreSQL database with relationships, constraints,
-    indexes, and migrations.
-4.  **Optional integration layer:** Approved AI document Q&A and
-    notification services.
-5.  **Operations and security:** HTTPS, environment-based secrets,
-    backups, logs, and access reviews.
-
-## Getting Started
-
-Repository setup and implementation are in progress. Add verified
-installation commands here once the source code and dependency files are
-available.
-
-### Prerequisites
-
--   Node.js and a package manager compatible with the frontend project
--   Python 3.10+ (confirm against backend configuration)
--   PostgreSQL
--   Git
-
-### Planned local setup
-
-1.  Clone the repository.
-2.  Configure frontend and backend environment variables using example
-    environment files.
-3.  Create a PostgreSQL database and apply project migrations.
-4.  Install frontend and backend dependencies.
-5.  Start the API and frontend development servers.
-6.  Sign in with development test accounts for each role.
-
-Do not commit passwords, API keys, database credentials, production
-data, or `.env` files. Use a `.env.example` with placeholders only.
-
-## Semester III Deliverables
-
-By the end of Week 12, the planned outcomes are:
-
-1.  **Requirement analysis:** Problem statement, scope, user roles,
-    functional requirements, and use cases.
-2.  **System design:** Architecture, ER diagram, database schema draft,
-    workflow diagrams, and UI wireframes.
-3.  **Initial prototype and documentation:** Demonstrable core
-    screens/workflows, preliminary testing evidence, project report, and
-    review presentation.
-
-## Development Roadmap
-
--   **Semester 3:** Requirements, architecture, database design,
-    wireframes, prototype, and documentation.
--   **Semester 4:** Authentication, RBAC, profiles, academic structure,
-    and foundational workflows.
--   **Semester 5:** Timetable, assignments, examinations/results,
-    notices, and helpdesk.
--   **Semester 6:** Reports, fee records, events/services, audit trail,
-    and optional AI prototype.
--   **Semester 7:** Pilot deployment, usability feedback,
-    security/performance testing, and fixes.
--   **Semester 8:** Final validation, documentation, demonstration, and
-    handover.
-
-## Security and Privacy
-
--   Enforce least-privilege access and validate permissions on every
-    protected API operation.
--   Hash passwords with a suitable password-hashing algorithm; never
-    store plaintext passwords.
--   Validate inputs, protect secrets, use HTTPS in deployed
-    environments, and maintain appropriate audit logs.
--   Use synthetic or authorized test data during development.
--   Restrict AI integrations to approved information and avoid sending
-    unnecessary personal data.
--   Maintain backups and document recovery procedures.
-
-## Testing Plan
-
--   Authentication and account-access tests
--   Role and permission tests across all five roles
--   CRUD and input-validation tests
--   Timetable conflict validation
--   Assignment submission and result-publication workflow tests
--   Complaint/service-request status tests
--   Database integrity and error-handling tests
--   Responsive UI, usability, and basic performance tests
-
-Record actual test results and known limitations; do not report
-unmeasured performance or success rates.
-
-## Repository Structure (Proposed)
-
-``` text
-smart-campus/
-├── frontend/          # Next.js application
-├── backend/           # FastAPI application
-├── docs/              # Requirements, diagrams, reports, and user guide
-├── tests/             # Automated and manual test assets
-├── .gitignore
-└── README.md
+### 2. Installation
+```bash
+pnpm install
 ```
 
-Adjust this structure to match the actual repository as implementation
-evolves.
+### 3. Environment Variables
+Create a `.env.local` file (or copy `.env.example`):
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
+```
 
-## Project Status
+### 4. Running the Development Server
+```bash
+pnpm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-**Current focus:** Semester III requirements, architecture, database
-design, initial prototype, and documentation.
+### 5. Production Build & Type Checking
+```bash
+# Verify TypeScript types
+pnpm exec tsc --noEmit
 
-Features described as planned are not necessarily implemented yet.
-Update this README as modules are built and tested.
+# Compile production bundle
+pnpm run build
+```
 
-## Contributing
+---
 
-1.  Create a feature branch.
-2.  Make a focused change and add or update tests.
-3.  Run relevant checks locally.
-4.  Open a pull request describing the change, test evidence, and
-    database/configuration updates.
-5.  Never include secrets or real personal records in commits.
+## 🔐 Credentials & Demo Testing
 
-## License
+To quickly test role-based perspectives on the `/login` page:
+- **Management**: `director@smartcampus.edu` / `SmartCampus@2026`
+- **HOD CSE**: `hod.cse@smartcampus.edu` / `SmartCampus@2026`
+- **Faculty**: `arjun.kumar@smartcampus.edu` / `SmartCampus@2026`
+- **Student**: `aarav.24cse118@smartcampus.edu` / `SmartCampus@2026`
+- **Admin**: `admin.office@smartcampus.edu` / `SmartCampus@2026`
 
-No license has been selected yet. Add a license only after the project
-team or institution decides how the source code may be used and
-distributed.
-
-## Acknowledgment
-
-Developed as a B.Tech Computer Science and Engineering semester-wise
-project. Add faculty guide, student team, and institutional details
-after confirmation.
+You can also switch roles on the fly using the avatar dropdown in the top header.
