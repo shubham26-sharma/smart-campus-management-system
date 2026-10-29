@@ -41,6 +41,7 @@ import { FeesModule } from '@/components/modules/fees/FeesModule'
 import { NoticesModule } from '@/components/modules/notices/NoticesModule'
 import { NotificationsDrawer } from '@/components/modules/notifications/NotificationsDrawer'
 import { ProfileModule } from '@/components/modules/profile/ProfileModule'
+import { ResultsModule } from '@/components/modules/results/ResultsModule'
 import { ReportsModule } from '@/components/modules/reports/ReportsModule'
 import { GlobalSearchModal } from '@/components/modules/search/GlobalSearchModal'
 import { StudentsModule } from '@/components/modules/students/StudentsModule'
@@ -51,10 +52,19 @@ import { Role } from '@/types'
 
 type Icon = typeof LayoutDashboard
 type NavItem = { label: string; icon: Icon }
+type NavigationGroup = { label: string; labels: string[] }
 
-const roleConfig: Record<Role, { description: string; nav: NavItem[] }> = {
+const roleConfig: Record<
+  Role,
+  { description: string; nav: NavItem[]; groups: NavigationGroup[] }
+> = {
   Management: {
     description: 'Institution-wide performance, academic outcomes, and authorized reports.',
+    groups: [
+      { label: 'Institutional outlook', labels: ['Overview', 'Analytics', 'Reports'] },
+      { label: 'Campus operations', labels: ['Departments', 'Fee records'] },
+      { label: 'Community', labels: ['Notices', 'Complaints'] },
+    ],
     nav: [
       { label: 'Overview', icon: LayoutDashboard },
       { label: 'Departments', icon: Building2 },
@@ -67,6 +77,14 @@ const roleConfig: Record<Role, { description: string; nav: NavItem[] }> = {
   },
   HOD: {
     description: 'CSE department operations, faculty workload, and academic progress.',
+    groups: [
+      {
+        label: 'Department planning',
+        labels: ['Department overview', 'Classes', 'Subjects', 'Timetable'],
+      },
+      { label: 'People & progress', labels: ['Faculty', 'Attendance analytics'] },
+      { label: 'Department communication', labels: ['Reports', 'Notices'] },
+    ],
     nav: [
       { label: 'Department overview', icon: LayoutDashboard },
       { label: 'Faculty', icon: GraduationCap },
@@ -80,6 +98,15 @@ const roleConfig: Record<Role, { description: string; nav: NavItem[] }> = {
   },
   Admin: {
     description: 'Manage academic records, accounts, schedules, notices, and services.',
+    groups: [
+      { label: 'Overview', labels: ['Overview'] },
+      { label: 'Campus records', labels: ['Students', 'Faculty', 'Departments'] },
+      { label: 'Academic operations', labels: ['Classes', 'Timetable'] },
+      {
+        label: 'Office & services',
+        labels: ['Notices', 'Complaints', 'Fee records', 'Settings'],
+      },
+    ],
     nav: [
       { label: 'Overview', icon: LayoutDashboard },
       { label: 'Students', icon: Users },
@@ -95,6 +122,12 @@ const roleConfig: Record<Role, { description: string; nav: NavItem[] }> = {
   },
   Faculty: {
     description: 'Your classes, attendance queue, assignments, and examination tasks.',
+    groups: [
+      { label: 'Teaching day', labels: ['Overview', 'My timetable', 'My classes'] },
+      { label: 'Class records', labels: ['Mark attendance', 'Attendance history'] },
+      { label: 'Coursework', labels: ['Assignments', 'Submissions', 'Examinations'] },
+      { label: 'Campus', labels: ['Notices'] },
+    ],
     nav: [
       { label: 'Overview', icon: LayoutDashboard },
       { label: 'My timetable', icon: CalendarDays },
@@ -109,6 +142,14 @@ const roleConfig: Record<Role, { description: string; nav: NavItem[] }> = {
   },
   Student: {
     description: 'Your timetable, attendance, assignments, results, and campus services.',
+    groups: [
+      { label: 'My learning', labels: ['Overview', 'My timetable', 'My attendance'] },
+      { label: 'Course progress', labels: ['Assignments', 'Examinations', 'Results'] },
+      {
+        label: 'Campus life',
+        labels: ['Notices', 'Complaints', 'Fee status', 'Campus events'],
+      },
+    ],
     nav: [
       { label: 'Overview', icon: LayoutDashboard },
       { label: 'My timetable', icon: CalendarDays },
@@ -148,6 +189,12 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
   }, [initialTab, setActiveTab])
 
   const config = roleConfig[role]
+  const groupedNav = config.groups
+    .map((group) => ({
+      ...group,
+      items: config.nav.filter((item) => group.labels.includes(item.label)),
+    }))
+    .filter((group) => group.items.length > 0)
   const displayActive =
     config.nav.find((item) => item.label.toLowerCase() === activeTab.toLowerCase())?.label ??
     activeTab
@@ -214,8 +261,12 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
       return <AssignmentsModule />
     }
 
-    if (act === 'examinations' || act === 'results') {
+    if (act === 'examinations') {
       return <ExaminationsModule />
+    }
+
+    if (act === 'results') {
+      return <ResultsModule />
     }
 
     if (act === 'notices') {
@@ -247,25 +298,28 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f8fb] text-slate-950 font-sans">
+    <div className="min-h-screen bg-[#f6f8fb] font-sans text-[#182230]">
       {/* ------------------------------------------------------------- */}
       {/* 1. LEFT COLLAPSIBLE SIDEBAR */}
       {/* ------------------------------------------------------------- */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-[252px] flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r border-[#e5eaf1] bg-white shadow-[0_8px_30px_rgba(16,24,40,0.04)] transition-transform duration-200 lg:translate-x-0',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         )}
+        aria-label="Sidebar navigation"
       >
         {/* Brand Logo & Title */}
-        <div className="flex h-[76px] items-center gap-3 border-b border-slate-100 px-6">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-[#152a55] text-white shadow-xs">
+        <div className="flex h-[72px] items-center gap-3 border-b border-[#e5eaf1] px-5">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-[#152a55] text-white shadow-sm">
             <GraduationCap className="size-5" />
           </div>
           <div>
-            <p className="text-[15px] font-bold text-[#152a55] leading-tight">Smart Campus</p>
-            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">
-              Academic ERP
+            <p className="text-sm font-bold leading-tight tracking-tight text-[#152a55]">
+              Smart Campus
+            </p>
+            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">
+              Campus workspace
             </p>
           </div>
           <button
@@ -279,38 +333,46 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
 
         {/* Navigation Items */}
         <div className="flex-1 overflow-y-auto px-3 py-5">
-          <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-            {role} workspace
-          </p>
-          <nav className="flex flex-col gap-1" aria-label="Primary navigation">
-            {config.nav.map(({ label, icon: Icon }) => (
-              <button
-                key={label}
-                onClick={() => {
-                  setActiveTab(label)
-                  setMobileMenuOpen(false)
-                }}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition-colors',
-                  displayActive === label
-                    ? 'bg-[#eaf0fb] text-[#1b4d9b] font-bold'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                )}
-              >
-                <Icon className="size-[17px] shrink-0" />
-                <span className="truncate">{label}</span>
-                {label === 'Complaints' && (
-                  <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                    6
-                  </span>
-                )}
-              </button>
+          <div className="mb-5 rounded-xl border border-blue-100 bg-[#f5f8fe] px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              Signed in as
+            </p>
+            <p className="mt-1 truncate text-xs font-semibold text-[#152a55]">{role}</p>
+          </div>
+          <nav className="space-y-5" aria-label="Primary navigation">
+            {groupedNav.map((group) => (
+              <section key={group.label}>
+                <h2 className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                  {group.label}
+                </h2>
+                <div className="flex flex-col gap-1">
+                  {group.items.map(({ label, icon: Icon }) => (
+                    <button
+                      key={label}
+                      onClick={() => {
+                        setActiveTab(label)
+                        setMobileMenuOpen(false)
+                      }}
+                      aria-current={displayActive === label ? 'page' : undefined}
+                      className={cn(
+                        'flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] transition-colors',
+                        displayActive === label
+                          ? 'bg-[#eaf0fb] font-semibold text-[#1b4d9b] shadow-[inset_2px_0_0_#1b4d9b]'
+                          : 'font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      )}
+                    >
+                      <Icon className="size-[17px] shrink-0" />
+                      <span className="truncate">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
             ))}
           </nav>
         </div>
 
         {/* Campus Assistant Widget Box */}
-        <div className="m-3 rounded-xl bg-[#f0f5ff] p-3.5 border border-blue-100/60 shadow-2xs">
+        <div className="m-3 rounded-xl border border-blue-100 bg-[#f5f8fe] p-3.5">
           <div className="mb-2 flex items-center gap-2 text-[#1b4d9b]">
             <Sparkles className="size-4" />
             <span className="text-xs font-bold">Campus assistant</span>
@@ -339,9 +401,9 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
       {/* ------------------------------------------------------------- */}
       {/* 2. MAIN HEADER & CONTENT SHELL */}
       {/* ------------------------------------------------------------- */}
-      <div className="lg:pl-[252px]">
+      <div className="lg:pl-[260px]">
         {/* Sticky Top Header */}
-        <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-md sm:px-8">
+        <header className="sticky top-0 z-20 flex h-[68px] items-center justify-between border-b border-[#e5eaf1] bg-white/95 px-4 backdrop-blur-md sm:px-7">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
@@ -351,7 +413,7 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
               <Menu className="size-5" />
             </button>
             <div className="hidden items-center gap-2 text-xs text-slate-400 sm:flex">
-              <span className="font-medium text-slate-500">Smart Campus</span>
+              <span className="font-medium text-slate-500">{role}</span>
               <span>/</span>
               <span className="font-semibold text-slate-800">{displayActive}</span>
             </div>
@@ -362,12 +424,13 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
             {/* Global Search Button */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="hidden items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 hover:border-slate-300 md:flex transition-colors"
+              aria-label="Search campus"
+              className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-xs text-slate-500 transition-colors hover:border-slate-300 md:px-3 md:py-2"
             >
               <Search className="size-4 text-slate-400" />
-              <span>Search anything</span>
+              <span className="hidden md:inline">Search anything</span>
               <kbd className="ml-2 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-400">
-                ⌘K
+                Ctrl K
               </kbd>
             </button>
 
@@ -376,10 +439,13 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
               onClick={() => setNotificationsOpen(true)}
               className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 transition-colors"
               title="Notifications"
+              aria-label={`Notifications${unreadNotificationsCount ? `, ${unreadNotificationsCount} unread` : ''}`}
             >
               <Bell className="size-[18px]" />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-rose-500" />
+                <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white">
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </span>
               )}
             </button>
 
@@ -389,6 +455,8 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
             <div className="relative">
               <button
                 onClick={() => setProfileDropdownOpen((v) => !v)}
+                aria-expanded={profileDropdownOpen}
+                aria-haspopup="menu"
                 className="flex items-center gap-2.5 rounded-lg p-1.5 hover:bg-slate-50 transition-colors"
               >
                 <span className="flex size-8 items-center justify-center rounded-full bg-[#dbe8ff] text-xs font-bold text-[#1b4d9b]">
@@ -452,14 +520,20 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
         {/* ------------------------------------------------------------- */}
         {/* 3. MAIN WORKSPACE AREA */}
         {/* ------------------------------------------------------------- */}
-        <main className="mx-auto max-w-[1440px] p-4 sm:p-8">
+        <main className="mx-auto max-w-[1520px] p-4 sm:px-7 sm:py-8">
           {/* Page Title & Context Header */}
           <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#3571c9]">
-                Monday, October 20, 2026 · Academic Session 2026–2027
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#3571c9]">
+                {new Intl.DateTimeFormat('en', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                }).format(new Date())}
+                {' · Academic Session 2026–2027'}
               </p>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">
+              <h1 className="text-2xl font-bold tracking-tight text-[#182230] sm:text-[28px]">
                 {pageTitle}
               </h1>
               <p className="mt-1 text-sm text-slate-500">
@@ -489,19 +563,6 @@ export function SmartCampusDashboard({ initialTab }: { initialTab?: string }) {
 
           {/* Module Content */}
           {renderContent()}
-
-          {/* Development API Connection Banner */}
-          <div className="mt-8 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-xs text-blue-800">
-            <Sparkles className="size-4 shrink-0 text-[#1b4d9b]" />
-            <span>
-              Connected via Smart Campus API Client. Fast development adapter active for offline
-              mode; connects seamlessly to FastAPI at{' '}
-              <code className="font-mono font-bold">
-                {process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api'}
-              </code>
-              .
-            </span>
-          </div>
         </main>
       </div>
 

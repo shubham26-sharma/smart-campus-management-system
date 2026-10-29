@@ -29,10 +29,15 @@ export function StatCard({
       : 'bg-slate-100 text-slate-600 border border-slate-200'
 
   return (
-    <div className={cn('rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-slate-300', className)}>
+    <div
+      className={cn(
+        'rounded-2xl border border-[#e5eaf1] bg-white p-5 shadow-[0_1px_3px_rgba(16,24,40,0.04)] transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_8px_24px_rgba(16,24,40,0.07)]',
+        className
+      )}
+    >
       <div className="flex items-start justify-between">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-blue-50 text-[#1b4d9b]">
-          <Icon className="size-[18px]" />
+        <div className="flex size-10 items-center justify-center rounded-xl bg-[#eef4ff] text-[#1b4d9b]">
+          <Icon className="size-[19px]" aria-hidden="true" />
         </div>
         {change && (
           <span className={cn('rounded-full px-2 py-1 text-[10px] font-bold', trendBg)}>
@@ -40,9 +45,13 @@ export function StatCard({
           </span>
         )}
       </div>
-      <p className="mt-4 text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
-      {subtitle && <p className="mt-1 text-[11px] text-slate-400">{subtitle}</p>}
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-[26px] font-bold leading-tight tracking-tight text-[#182230]">
+        {value}
+      </p>
+      {subtitle && <p className="mt-1.5 text-xs text-slate-500">{subtitle}</p>}
     </div>
   )
 }

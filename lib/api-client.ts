@@ -50,12 +50,13 @@ export interface ApiResponse<T> {
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
-  fallbackData: T
+  fallbackData?: T
 ): Promise<ApiResponse<T>> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 3500)
+
   try {
     const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3500)
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('smartcampus_token') : null
 
@@ -68,7 +69,6 @@ async function request<T>(
         ...options.headers,
       },
     })
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       throw new Error(`API Error ${response.status}: ${response.statusText}`)
@@ -76,7 +76,11 @@ async function request<T>(
 
     const data = await response.json()
     return { data, status: response.status, isMock: false }
-  } catch (_error) {
+  } catch (error) {
+    if (fallbackData === undefined) {
+      throw error
+    }
+
     // Graceful fallback to development mock data adapter
     return {
       data: fallbackData,
@@ -84,6 +88,8 @@ async function request<T>(
       message: 'Loaded from local development adapter (backend API unreachable or offline)',
       isMock: true,
     }
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 
@@ -160,31 +166,13 @@ export const apiClient = {
     subjectId: string
     entries: { studentId: string; rollNumber: string; studentName: string; status: 'Present' | 'Absent' }[]
   }) => {
-    const presentCount = payload.entries.filter((e) => e.status === 'Present').length
-    const absentCount = payload.entries.length - presentCount
-
-    const newRecord: AttendanceRecord = {
-      id: `att-rec-${Date.now()}`,
-      date: payload.date,
-      lectureSession: payload.lectureSession,
-      classId: payload.classId,
-      className: 'B.Tech CSE - 5th Sem (Section A)',
-      subjectId: payload.subjectId,
-      subjectName: 'Design & Analysis of Algorithms',
-      totalStudents: payload.entries.length,
-      presentCount,
-      absentCount,
-      markedBy: 'Prof. Arjun Kumar',
-      markedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }
-
     return request<AttendanceRecord>(
       '/attendance/mark',
       {
         method: 'POST',
         body: JSON.stringify(payload),
       },
-      newRecord
+      undefined
     )
   },
 
@@ -199,7 +187,8 @@ export const apiClient = {
   },
 
   getStudentResult: async (studentId: string = 'stu-01') => {
-    return request<StudentResult>(`/results/student/${studentId}`, {}, mockStudentResult)
+    const fallback = studentId === mockStudentResult.studentId ? mockStudentResult : undefined
+    return request<StudentResult>(`/results/student/${studentId}`, {}, fallback)
   },
 
   // Notices
@@ -253,7 +242,8 @@ export const apiClient = {
 
   // Fees
   getFeeRecord: async (studentId: string = 'stu-01') => {
-    return request<FeeRecord>(`/fees/student/${studentId}`, {}, mockFeeRecord)
+    const fallback = studentId === mockFeeRecord.studentId ? mockFeeRecord : undefined
+    return request<FeeRecord>(`/fees/student/${studentId}`, {}, fallback)
   },
 
   // Events

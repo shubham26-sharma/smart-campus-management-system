@@ -1,198 +1,198 @@
 'use client'
 
-import React from 'react'
+import { ArrowRight, BookOpen, CalendarDays, ClipboardCheck, Clock3, MapPin, Users } from 'lucide-react'
 import {
-  ArrowUpRight,
-  BookOpen,
-  CalendarDays,
-  CheckCircle2,
-  ClipboardCheck,
-  Clock,
-  FileText,
-  MapPin,
-  ShieldCheck,
-  Users,
-} from 'lucide-react'
-import { StatCard } from '@/components/ui/stat-card'
-import { mockAssignments, mockTimetable } from '@/lib/mock-data'
+  DashboardAction,
+  DashboardEmptyState,
+  DashboardMetric,
+  DashboardPanel,
+  WorkspacePreview,
+  formatDashboardDate,
+} from '@/components/dashboards/dashboard-primitives'
 import { useAuth } from '@/lib/auth-context'
+import { mockAssignments, mockFaculty, mockSubmissions, mockTimetable } from '@/lib/mock-data'
+import { compareTimetableTimes } from '@/lib/timetable-utils'
 
 export function FacultyDashboard() {
-  const { setActiveTab } = useAuth()
-
-  const todayClasses = mockTimetable.filter((t) => t.day === 'Monday')
+  const { currentUser, setActiveTab } = useAuth()
+  const faculty = mockFaculty.find((item) => item.name === currentUser.name)
+  const taughtCodes = faculty?.subjects.map((subject) => subject.split(' ')[0]) ?? []
+  const today = new Intl.DateTimeFormat('en', { weekday: 'long' }).format(new Date())
+  const todayClasses = mockTimetable
+    .filter((slot) => slot.day === today && slot.facultyName === currentUser.name)
+    .sort((a, b) => compareTimetableTimes(a.startTime, b.startTime))
+  const courses = mockAssignments.filter(
+    (assignment) =>
+      taughtCodes.includes(assignment.subjectCode) && assignment.status === 'Published'
+  )
+  const courseIds = new Set(courses.map((course) => course.id))
+  const needsReview = mockSubmissions.filter(
+    (submission) =>
+      courseIds.has(submission.assignmentId) &&
+      (submission.status === 'Submitted' || submission.status === 'Late')
+  )
 
   return (
-    <div className="space-y-6">
-      {/* Attendance Quick CTA Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50/60 p-5 shadow-2xs">
-        <div className="flex items-start gap-3.5">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#1b4d9b] text-white">
-            <ClipboardCheck className="size-5" />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-slate-900">
-              Attendance Marking Queue · CS501 Algorithms
-            </h2>
-            <p className="mt-0.5 text-xs text-slate-600">
-              B.Tech CSE - Semester 5 (Section A) · Room 304 · 10:00 AM Lecture
-            </p>
-          </div>
+    <div className="space-y-5 sm:space-y-6">
+      <section className="grid gap-4 rounded-2xl border border-[#dce7f7] bg-[#edf3fc] p-5 sm:p-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.7fr)]">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1b4d9b]">
+            Faculty desk · {today}
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#152a55]">
+            Your teaching day
+          </h2>
+          <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-600">
+            A practical view of today&apos;s classes, attendance, and coursework that needs your attention.
+          </p>
+          <WorkspacePreview />
         </div>
-        <button
-          onClick={() => setActiveTab('Mark attendance')}
-          className="shrink-0 rounded-lg bg-[#1b4d9b] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#153e7e] transition-colors"
-        >
-          Mark Today&apos;s Attendance
-        </button>
-      </div>
+        <div className="grid grid-cols-2 gap-3 self-end">
+          <DashboardMetric
+            icon={CalendarDays}
+            label="Classes today"
+            value={todayClasses.length}
+            detail={today}
+            tone="navy"
+          />
+          <DashboardMetric
+            icon={ClipboardCheck}
+            label="To review"
+            value={needsReview.length}
+            detail="Submitted work awaiting review"
+            tone={needsReview.length ? 'amber' : 'teal'}
+          />
+        </div>
+      </section>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Today's Assigned Lectures"
-          value="4 Classes"
-          change="Next at 10:00 AM"
-          trend="up"
-          icon={CalendarDays}
-          subtitle="2 Theory + 1 Lab Session"
-        />
-        <StatCard
-          label="Assigned Students"
-          value="126"
-          change="3 Sections"
-          trend="neutral"
-          icon={Users}
-          subtitle="CSE 5A, CSE 5B, CSE 3A"
-        />
-        <StatCard
-          label="Submissions to Evaluate"
-          value="23 Pending"
-          change="Due this week"
-          trend="down"
-          icon={CheckCircle2}
-          subtitle="Dynamic Programming HW"
-        />
-        <StatCard
-          label="Attendance Compliance"
-          value="94%"
-          change="This Month"
-          trend="up"
-          icon={ClipboardCheck}
-          subtitle="Marked within lecture hour"
-        />
-      </div>
-
-      {/* Today's Schedule & Pending Submissions */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Today's Teaching Schedule */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">Today&apos;s Teaching Timetable</h3>
-              <p className="text-xs text-slate-500">Monday Schedule · CS Department</p>
-            </div>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+        <DashboardPanel
+          eyebrow="Teaching schedule"
+          title="Today&apos;s classes"
+          description="Scheduled classes assigned to your faculty profile."
+          action={
             <button
               onClick={() => setActiveTab('My timetable')}
               className="text-xs font-semibold text-[#1b4d9b] hover:underline"
             >
-              Full Week
+              Weekly timetable
             </button>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {todayClasses.map((item, idx) => (
-              <div
-                key={item.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4 hover:border-slate-200 hover:bg-slate-50 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white border border-slate-200 text-[#1b4d9b] font-bold text-xs">
-                    0{idx + 1}
+          }
+        >
+          {todayClasses.length ? (
+            <ol className="space-y-3">
+              {todayClasses.map((slot) => (
+                <li
+                  key={slot.id}
+                  className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-[#fbfcfe] p-4 sm:flex-row sm:items-center"
+                >
+                  <div className="flex shrink-0 items-center gap-2 sm:w-28 sm:flex-col sm:items-start sm:gap-0">
+                    <span className="text-xs font-bold text-[#152a55]">{slot.startTime}</span>
+                    <span className="text-[11px] text-slate-500">to {slot.endTime}</span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-bold text-slate-900">{item.subjectName}</h4>
-                      <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-[#1b4d9b]">
-                        {item.subjectCode}
+                  <div className="min-w-0 flex-1 border-l-2 border-[#3571c9] pl-3">
+                    <p className="text-sm font-semibold text-slate-800">{slot.subjectName}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                      <span>{slot.subjectCode}</span>
+                      <span>{slot.section}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin className="size-3" /> {slot.room}
                       </span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3 text-slate-400" />
-                        {item.startTime} – {item.endTime}
-                      </span>
-                      <span>·</span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="size-3 text-slate-400" />
-                        {item.room}
-                      </span>
-                      <span>·</span>
-                      <span className="font-semibold text-slate-700">{item.section}</span>
-                    </div>
+                    </p>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-center">
                   <button
                     onClick={() => setActiveTab('Mark attendance')}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                    className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#1b4d9b] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#153e7e]"
                   >
+                    <ClipboardCheck className="size-3.5" />
                     Attendance
                   </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <DashboardEmptyState
+              title="No classes assigned today"
+              description="Your weekly timetable remains available for planning upcoming teaching sessions."
+            />
+          )}
+        </DashboardPanel>
 
-        {/* Assignments to Evaluate */}
-        <div className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900">Grading & Evaluation</h3>
+        <div className="space-y-5">
+          <DashboardPanel
+            eyebrow="Coursework"
+            title="Assignment activity"
+            description="Published assignments linked to your assigned subject list."
+            action={
               <button
                 onClick={() => setActiveTab('Assignments')}
                 className="text-xs font-semibold text-[#1b4d9b] hover:underline"
               >
-                Review all
+                Manage
               </button>
-            </div>
+            }
+          >
+            {courses.length ? (
+              <div className="space-y-3">
+                {courses.map((course) => {
+                  const pending = mockSubmissions.filter(
+                    (submission) =>
+                      submission.assignmentId === course.id &&
+                      (submission.status === 'Submitted' || submission.status === 'Late')
+                  ).length
+                  return (
+                    <article
+                      key={course.id}
+                      className="rounded-xl border border-slate-200 p-3.5"
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-[#3571c9]">
+                        {course.subjectCode} · {course.totalMarks} marks
+                      </p>
+                      <h3 className="mt-1 text-xs font-semibold leading-relaxed text-slate-800">
+                        {course.title}
+                      </h3>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2.5 text-[11px] text-slate-500">
+                        <span>{course.submissionsCount} / {course.totalStudents} submissions</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock3 className="size-3" /> Due {formatDashboardDate(course.dueDate)}
+                        </span>
+                      </div>
+                      {pending > 0 && (
+                        <p className="mt-2 text-[10px] font-semibold text-amber-800">
+                          {pending} submission{pending === 1 ? '' : 's'} awaiting review
+                        </p>
+                      )}
+                    </article>
+                  )
+                })}
+              </div>
+            ) : (
+              <DashboardEmptyState
+                title="No linked assignments"
+                description="Published coursework for assigned subjects will appear here."
+              />
+            )}
+          </DashboardPanel>
 
-            <div className="mt-4 space-y-3">
-              {mockAssignments.slice(0, 2).map((asg) => (
-                <div key={asg.id} className="rounded-lg border border-slate-100 p-3 bg-slate-50/50">
-                  <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-[#1b4d9b]">
-                    {asg.subjectCode}
-                  </span>
-                  <h4 className="mt-1 text-xs font-bold text-slate-800 line-clamp-1">{asg.title}</h4>
-                  <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-                    <span>
-                      {asg.submissionsCount} of {asg.totalStudents} submitted
-                    </span>
-                    <span className="font-semibold text-amber-700">Due {asg.dueDate}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+            <DashboardAction
+              icon={Users}
+              title="Student roster"
+              description="Open class and student records"
+              onClick={() => setActiveTab('My classes')}
+            />
+            <DashboardAction
+              icon={BookOpen}
+              title="Assignments & marks"
+              description="Review submissions and marks"
               onClick={() => setActiveTab('Assignments')}
-              className="mt-4 w-full rounded-lg bg-[#1b4d9b] py-2 text-xs font-semibold text-white hover:bg-[#153e7e]"
-            >
-              Grade Pending Submissions
-            </button>
-          </div>
-
-          {/* Invigilation Schedule Note */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm text-xs">
-            <div className="flex items-center gap-2 font-bold text-slate-900">
-              <ShieldCheck className="size-4 text-[#1b4d9b]" />
-              <span>Exam Invigilation Roster</span>
-            </div>
-            <p className="mt-1 text-slate-500 text-[11px] leading-relaxed">
-              Assigned to Mid-Term Exam Hall 101 on Nov 16 (10:00 AM – 12:00 PM).
-            </p>
+            />
+            <DashboardAction
+              icon={ArrowRight}
+              title="Attendance history"
+              description="Review attendance registers"
+              onClick={() => setActiveTab('Attendance history')}
+            />
           </div>
         </div>
       </div>

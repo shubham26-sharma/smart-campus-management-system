@@ -91,9 +91,7 @@ Smart Campus provides tailored workspaces for each tier in the institutional hie
 - **Global Search (`⌘K`)**: Fast multi-entity search indexing students, faculty, courses, rooms, and notices.
 - **Notifications Drawer**: Interactive slide-out notification center with unread count and mark-as-read controls.
 
----
-
-## 🛠️ Technology Stack
+### 🛠️ Technology Stack
 
 - **Framework**: Next.js 16.4 (App Router)
 - **Library**: React 19

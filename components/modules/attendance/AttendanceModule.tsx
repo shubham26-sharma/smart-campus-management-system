@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
+import { apiClient } from '@/lib/api-client'
 import { useAuth } from '@/lib/auth-context'
 import {
   mockClasses,
@@ -54,13 +55,14 @@ function FacultyAttendanceMarkingView() {
   const [selectedSession, setSelectedSession] = useState('Lecture 02 (10:00 AM – 11:00 AM)')
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Student Attendance State: Map studentId -> boolean (true: Present, false: Absent)
-  const [attendance, setAttendance] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(mockStudents.map((s) => [s.id, true]))
+  const [attendance, setAttendance] = useState<Record<string, boolean | null>>(() =>
+    Object.fromEntries(mockStudents.map((s) => [s.id, null]))
   )
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isSavedSuccess, setIsSavedSuccess] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [savedRecords, setSavedRecords] = useState<AttendanceRecord[]>(mockRecentAttendanceRecords)
   const [viewMode, setViewMode] = useState<'mark' | 'history'>('mark')
 
@@ -73,10 +75,14 @@ function FacultyAttendanceMarkingView() {
   }, [searchQuery])
 
   const presentCount = useMemo(
-    () => Object.values(attendance).filter(Boolean).length,
+    () => Object.values(attendance).filter((status) => status === true).length,
     [attendance]
   )
-  const absentCount = mockStudents.length - presentCount
+  const absentCount = useMemo(
+    () => Object.values(attendance).filter((status) => status === false).length,
+    [attendance]
+  )
+  const unmarkedCount = mockStudents.length - presentCount - absentCount
 
   const handleToggle = (studentId: string) => {
     setAttendance((prev) => ({
@@ -85,6 +91,7 @@ function FacultyAttendanceMarkingView() {
     }))
     setHasUnsavedChanges(true)
     setIsSavedSuccess(false)
+    setSaveError(null)
   }
 
   const handleMarkAll = (status: boolean) => {
@@ -92,28 +99,42 @@ function FacultyAttendanceMarkingView() {
     setAttendance(updated)
     setHasUnsavedChanges(true)
     setIsSavedSuccess(false)
+    setSaveError(null)
   }
 
-  const handleSaveConfirmed = () => {
-    const newRecord: AttendanceRecord = {
-      id: `att-rec-${Date.now()}`,
-      date: selectedDate,
-      lectureSession: selectedSession,
-      classId: selectedClass,
-      className: mockClasses.find((c) => c.id === selectedClass)?.name || 'B.Tech CSE - 5th Sem (Sec A)',
-      subjectId: selectedSubject,
-      subjectName: mockSubjects.find((s) => s.id === selectedSubject)?.name || 'Design & Analysis of Algorithms',
-      totalStudents: mockStudents.length,
-      presentCount,
-      absentCount,
-      markedBy: 'Prof. Arjun Kumar',
-      markedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }
+  const handleSaveConfirmed = async () => {
+    setIsSaving(true)
+    setSaveError(null)
 
-    setSavedRecords((prev) => [newRecord, ...prev])
-    setHasUnsavedChanges(false)
-    setIsConfirmOpen(false)
-    setIsSavedSuccess(true)
+    try {
+      const response = await apiClient.saveAttendance({
+        date: selectedDate,
+        lectureSession: selectedSession,
+        classId: selectedClass,
+        subjectId: selectedSubject,
+        entries: mockStudents.map((student) => ({
+          studentId: student.id,
+          rollNumber: student.rollNumber,
+          studentName: student.name,
+          status: attendance[student.id] === true ? 'Present' : 'Absent',
+        })),
+      })
+
+      if (response.isMock) {
+        throw new Error('Attendance was not saved because the campus API is unavailable.')
+      }
+
+      setSavedRecords((prev) => [response.data, ...prev])
+      setHasUnsavedChanges(false)
+      setIsConfirmOpen(false)
+      setIsSavedSuccess(true)
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : 'Attendance could not be saved. Please try again.'
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -152,11 +173,11 @@ function FacultyAttendanceMarkingView() {
       </div>
 
       {isSavedSuccess && (
-        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
+        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800" role="status">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="size-4.5 text-emerald-600" />
             <span className="font-semibold">
-              Attendance saved successfully for {selectedSession}! Total marked: {mockStudents.length} ({presentCount} Present, {absentCount} Absent).
+              Attendance saved for {selectedSession}. Total marked: {mockStudents.length} ({presentCount} Present, {absentCount} Absent).
             </span>
           </div>
           <button
@@ -165,6 +186,13 @@ function FacultyAttendanceMarkingView() {
           >
             <X className="size-4" />
           </button>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800" role="alert">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          <span>{saveError}</span>
         </div>
       )}
 
@@ -282,10 +310,16 @@ function FacultyAttendanceMarkingView() {
                   <span className="text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
                     {absentCount} Absent
                   </span>
+                  {unmarkedCount > 0 && (
+                    <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-slate-600">
+                      {unmarkedCount} Unmarked
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={() => setIsConfirmOpen(true)}
-                  className="rounded-lg bg-[#1b4d9b] px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#153e7e] transition-colors"
+                  disabled={unmarkedCount > 0}
+                  className="rounded-lg bg-[#1b4d9b] px-4 py-1.5 text-xs font-bold text-white shadow-xs transition-colors hover:bg-[#153e7e] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Save Attendance Record
                 </button>
@@ -308,12 +342,12 @@ function FacultyAttendanceMarkingView() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
                 {filteredStudents.map((student, idx) => {
-                  const isPresent = attendance[student.id] ?? true
+                  const status = attendance[student.id]
                   return (
                     <tr
                       key={student.id}
                       className={`hover:bg-slate-50/80 transition-colors ${
-                        !isPresent ? 'bg-rose-50/20' : ''
+                        status === false ? 'bg-rose-50/20' : ''
                       }`}
                     >
                       <td className="py-3.5 px-5 text-slate-400 font-mono text-[11px]">
@@ -343,13 +377,18 @@ function FacultyAttendanceMarkingView() {
                       <td className="py-3.5 px-5 text-right">
                         <button
                           onClick={() => handleToggle(student.id)}
+                          aria-label={`${student.name}: ${
+                            status === null ? 'unmarked' : status ? 'present' : 'absent'
+                          }. Toggle attendance status.`}
                           className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all shadow-2xs ${
-                            isPresent
+                            status === true
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                              : status === false
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                                : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                           }`}
                         >
-                          {isPresent ? '✓ Present' : '✗ Absent'}
+                          {status === true ? 'Present' : status === false ? 'Absent' : 'Not marked'}
                         </button>
                       </td>
                     </tr>
@@ -436,6 +475,10 @@ function FacultyAttendanceMarkingView() {
               <span className="text-slate-500">Absent Count:</span>
               <span className="font-bold text-rose-700">{absentCount} Students</span>
             </div>
+            <div className="flex justify-between border-t border-slate-200 pt-2">
+              <span className="text-slate-500">Unmarked:</span>
+              <span className="font-bold text-slate-700">{unmarkedCount} Students</span>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
@@ -447,9 +490,10 @@ function FacultyAttendanceMarkingView() {
             </button>
             <button
               onClick={handleSaveConfirmed}
-              className="rounded-lg bg-[#1b4d9b] px-4 py-2 font-bold text-white hover:bg-[#153e7e]"
+              disabled={isSaving || unmarkedCount > 0}
+              className="rounded-lg bg-[#1b4d9b] px-4 py-2 font-bold text-white hover:bg-[#153e7e] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Confirm & Save Register
+              {isSaving ? 'Saving…' : 'Confirm & Save Register'}
             </button>
           </div>
         </div>
@@ -462,11 +506,16 @@ function FacultyAttendanceMarkingView() {
 // 2. STUDENT ATTENDANCE VIEW (Formula & Monthly Breakdown)
 // -------------------------------------------------------------
 function StudentAttendanceView() {
-  const [selectedMonth, setSelectedMonth] = useState('October 2026')
+  const [selectedMonth, setSelectedMonth] = useState('2026-10')
+  const hasMonthlyData = selectedMonth === '2026-10'
 
   // Calculate Overall Monthly Percentage:
   // (Total classes attended in month / Total classes conducted in month) * 100
   const totals = useMemo(() => {
+    if (!hasMonthlyData) {
+      return { conducted: 0, attended: 0, absent: 0, percentage: null }
+    }
+
     let conducted = 0
     let attended = 0
     mockStudentAttendanceBreakdown.forEach((sub) => {
@@ -475,7 +524,13 @@ function StudentAttendanceView() {
     })
     const percentage = conducted > 0 ? (attended / conducted) * 100 : null
     return { conducted, attended, absent: conducted - attended, percentage }
-  }, [])
+  }, [hasMonthlyData])
+  const hasClasses = totals.conducted > 0
+  const selectedMonthLabel = selectedMonth
+    ? new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(
+        new Date(`${selectedMonth}-01T00:00:00`)
+      )
+    : 'Selected month'
 
   return (
     <div className="space-y-6">
@@ -488,15 +543,18 @@ function StudentAttendanceView() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold text-slate-600">Month:</label>
+          <label htmlFor="attendance-month" className="text-xs font-semibold text-slate-600">
+            Month:
+          </label>
           <select
+            id="attendance-month"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 outline-none focus:border-[#1b4d9b]"
           >
-            <option>October 2026</option>
-            <option>September 2026</option>
-            <option>August 2026</option>
+            <option value="2026-10">October 2026</option>
+            <option value="2026-09">September 2026</option>
+            <option value="2026-08">August 2026</option>
           </select>
         </div>
       </div>
@@ -505,15 +563,23 @@ function StudentAttendanceView() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Monthly Formula Percentage
+            Monthly Attendance
           </span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold tracking-tight text-slate-900">
-              {totals.percentage ? `${totals.percentage.toFixed(1)}%` : 'N/A'}
+              {totals.percentage === null ? 'N/A' : `${totals.percentage.toFixed(1)}%`}
             </span>
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-              Above 75% Criteria
-            </span>
+            {totals.percentage !== null && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  totals.percentage >= 75
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'bg-amber-50 text-amber-800'
+                }`}
+              >
+                {totals.percentage >= 75 ? 'Meets 75% threshold' : 'Below 75% threshold'}
+              </span>
+            )}
           </div>
           <p className="mt-2 text-[11px] text-slate-500">
             Formula: (Classes Attended ÷ Classes Conducted) × 100
@@ -525,9 +591,9 @@ function StudentAttendanceView() {
             Classes Conducted
           </span>
           <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-            {totals.conducted} Lectures
+            {hasClasses ? `${totals.conducted} Lectures` : 'N/A'}
           </p>
-          <p className="mt-2 text-[11px] text-slate-500">Excludes cancelled periods</p>
+          <p className="mt-2 text-[11px] text-slate-500">Recorded conducted classes</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -535,7 +601,7 @@ function StudentAttendanceView() {
             Classes Attended
           </span>
           <p className="mt-2 text-3xl font-bold tracking-tight text-emerald-700">
-            {totals.attended} Lectures
+            {hasClasses ? `${totals.attended} Lectures` : 'N/A'}
           </p>
           <p className="mt-2 text-[11px] text-slate-500">Present in register</p>
         </div>
@@ -545,7 +611,7 @@ function StudentAttendanceView() {
             Classes Absent
           </span>
           <p className="mt-2 text-3xl font-bold tracking-tight text-rose-600">
-            {totals.absent} Lectures
+            {hasClasses ? `${totals.absent} Lectures` : 'N/A'}
           </p>
           <p className="mt-2 text-[11px] text-slate-500">Excused & unexcused</p>
         </div>
@@ -557,18 +623,22 @@ function StudentAttendanceView() {
           <div>
             <h3 className="text-sm font-bold text-slate-900">Subject-Wise Attendance Breakdown</h3>
             <p className="text-xs text-slate-500">
-              Review percentage in each individual subject for {selectedMonth}
+              Review monthly attendance by subject for {selectedMonthLabel}
             </p>
           </div>
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#1b4d9b]">
-            6 Registered Courses
-          </span>
+          {hasMonthlyData && (
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#1b4d9b]">
+              {mockStudentAttendanceBreakdown.length} courses
+            </span>
+          )}
         </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {hasMonthlyData ? (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {mockStudentAttendanceBreakdown.map((item) => {
             const pct = item.percentage
-            const isSafe = (pct ?? 0) >= 75
+            const subjectHasClasses = item.classesConducted > 0
+            const isSafe = pct !== null && pct >= 75
             return (
               <div
                 key={item.subjectCode}
@@ -581,10 +651,14 @@ function StudentAttendanceView() {
                     </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        isSafe ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                        !subjectHasClasses
+                          ? 'bg-slate-100 text-slate-600'
+                          : isSafe
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-rose-50 text-rose-700'
                       }`}
                     >
-                      {pct ? `${pct.toFixed(1)}%` : 'N/A'}
+                      {pct === null ? 'N/A' : `${pct.toFixed(1)}%`}
                     </span>
                   </div>
 
@@ -597,7 +671,9 @@ function StudentAttendanceView() {
                     <div className="flex justify-between text-[11px] text-slate-600 font-medium">
                       <span>Attended</span>
                       <span>
-                        {item.classesAttended} / {item.classesConducted} classes
+                        {subjectHasClasses
+                          ? `${item.classesAttended} / ${item.classesConducted} classes`
+                          : 'N/A'}
                       </span>
                     </div>
                     <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
@@ -612,15 +688,32 @@ function StudentAttendanceView() {
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-500">
-                  <span>Absent: {item.classesConducted - item.classesAttended}</span>
-                  <span className={isSafe ? 'text-emerald-700 font-semibold' : 'text-rose-700 font-semibold'}>
-                    {isSafe ? 'Eligible for Exams' : 'Low Attendance Alert'}
+                  <span>
+                    Absent: {subjectHasClasses ? item.classesConducted - item.classesAttended : 'N/A'}
+                  </span>
+                  <span className={isSafe ? 'font-semibold text-emerald-700' : 'font-semibold text-rose-700'}>
+                    {!subjectHasClasses
+                      ? 'No classes recorded'
+                      : isSafe
+                        ? 'Meets threshold'
+                        : 'Low attendance'}
                   </span>
                 </div>
               </div>
             )
           })}
-        </div>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+            <Calendar className="mx-auto size-5 text-slate-400" aria-hidden="true" />
+            <p className="mt-2 text-sm font-semibold text-slate-700">
+              No attendance data for this month
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Monthly records are not available for the selected period.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
